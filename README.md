@@ -24,8 +24,11 @@ By default, the export will include all tables. If you only want certain tables 
 *LazyCron.module*  
 *ProcessDatabaseBackups.module*  
 
-Not a real requirement but this module is useful to restore database from file or delete older backup files.  
-I recommend to use both modules.  
+Not a real requirement but *ProcessDatabaseBackups.module* is useful to restore database from file or delete older backup files.  
+I recommend to use both modules.
+
+## Thanks
+to Ryan. I took some nice code from *ProcessDatabaseBackups.module*.  
 
 ## License
 [GNU-GPLv3](http://www.gnu.org/licenses/gpl-3.0.html)  
