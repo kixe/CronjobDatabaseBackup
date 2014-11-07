@@ -2,12 +2,6 @@
 
 /**
  * ProcessWire Module Cronjob Database Backup
- *
- * 
- * Auto backup your database periodically. Set interval in settings.
- * Use Process Database Backup Module to restore from backup or delete them.
- * This module could slow down your processes since backups may take some time,
- * depending on how much there is to backup.
  * 
  * made by kixe (Christoph Thelen) 05.11.14
  * Licensed under GNU/GPL v3
@@ -21,9 +15,6 @@
  * 
  * http://processwire.com
  *
- * small ISSUES
- * #1 seems lazyCron is running twice. Always double entries in log file
- * #2 error message remains after correcting. page has to be reloaded.
  *
  */
 
@@ -33,16 +24,17 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		return array(
 			'title' => __('Cronjob Database Backup'), 
 			'version' => 100,
-			'summary' => __('Periodic automatic backup of the database. Set interval in settings. Use Process Database Backup Module to restore data or delete backups. This module could slow down your processes since data backup may take some time, depending on how much there is to backup.'),
+			'summary' => __("Periodic automatic backup of the database. Runs only if current user has db-backup permission to prevent slowing down processes for frontend user (guest).Set interval in settings. Use 'Process Database Backup Module' to restore data or delete backups."),
 			'autoload' => true,
 			'singular' => true,
 			'author' => 'kixe',
 			'license' => 'GNU-GPLv3',
 			'permission' => 'db-backup', // loggedin User must have this permission
+			'permissions'=> array('db-backup' => 'Manage database backups (recommended for superuser only)'),
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
 			'requires' => array(
 					'LazyCron',
-					'ProcessDatabaseBackups'
+					//'ProcessDatabaseBackups' // recommended but not necessary
 					),
 			'icon' => 'database'
 		);
@@ -73,7 +65,11 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public function init() {
 		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
 		if ($this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
-		if ($this->cycle) $this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
+		if ($this->cycle) {
+			$this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
+			//$this->modules->getInstall("JqueryMagnific"); 
+			//$this->config->scripts->add($this->config->urls->CronjobDatabaseBackup."CronjobDatabaseBackup.js");
+		}
 		parent::init();
 	}
 	
@@ -132,7 +128,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		}
 
 		$file = $this->backup->backup($options); 
-		$message = $this->_("\ndatabackup saved by cronjob - path[").$file.']';
+		$message = $this->_("cronjob saved db-backup - PATH[").$file.']';
 		$this->message($message,Notice::logOnly);
 	}
 
@@ -151,7 +147,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
  
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
-        $f->label = __("Backup Cycle Time");
+		$f->label = __("Backup Cycle Time");
         $f->description = __("Select a cycle time for your backups.");
         $f->notes = __("Leave blank to disable automatic backup. The cronjob to backup your database executes only if current user has db-backup permission.");
 		$f->addOptions(array(
@@ -168,22 +164,24 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$def = $config->dbName;
 		$f = $modules->get('InputfieldName'); 
 		$f->attr('name', 'backup_name');
+		$f->set('collapsed',$data['backup_name']?false:true);
 		$f->set('required', false);
 		$f->label = __('Backup Name'); 
 		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
-		$f->notes = __('If omitted, a unique filename will be automatically generated: [databasename]-[n].sql.'); 
+		$f->notes = __('If omitted the name of the database will be used (config). Anyway a unique filename will be automatically generated: [name]-[n].sql.'); 
 		$f->value = $data['backup_name'];
 		$fields->add($f); 
 
 		$def = str_replace($config->paths->root,'',$database->backups()->getPath());
 		$f = $modules->get('InputfieldText'); 
 		$f->attr('name', 'field_storage_path');
+		$f->set('collapsed',$data['field_storage_path']?false:true);
 		$f->set('required', false);
 		$f->label = __('Storage Path'); 
 		$f->description = __("Path to custom storage directory.");
 		$f->notes = __("Leave this blank for storage under default path: $def");
-		if($data['field_storage_path'] && !is_dir($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path doesn't exist! Default pass will be used.");
-		elseif($data['field_storage_path'] && !is_writable($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path isn't writable! Default pass will be used.");
+		if(!count($_POST) && $data['field_storage_path'] && !is_dir($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path doesn't exist! Default pass will be used.");
+		elseif(!count($_POST) && $data['field_storage_path'] && !is_writable($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path isn't writable! Default pass will be used.");
 		$f->value = $data['field_storage_path'];
 		$fields->add($f);
 
