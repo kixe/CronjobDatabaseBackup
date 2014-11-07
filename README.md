@@ -7,9 +7,8 @@ This module could slow down your processes since backups may take some time,
 depending on how much there is to backup.  
 
 This cronjob (hooks on *LazyCron*) is executed by a call to module: *ProcessPageView*.   
-This cronjob runs only if current user has db-backup permission.  
-Permission will be added with module installation.  
-Assign the permission to the roles of users which runs the process in the background.  
+Runs only if current user has db-backup permission. Permission will be added with module installation.  
+Assign the permission to the roles which should trigger the process.  
 Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
