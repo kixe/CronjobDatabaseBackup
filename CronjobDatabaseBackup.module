@@ -23,7 +23,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 100,
+			'version' => 101,
 			'summary' => __("Periodic automatic backup of the database. Runs only if current user has db-backup permission to prevent slowing down processes for frontend user (guest).Set interval in settings. Use 'Process Database Backup Module' to restore data or delete backups."),
 			'autoload' => true,
 			'singular' => true,
@@ -67,8 +67,6 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		if ($this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle) {
 			$this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
-			//$this->modules->getInstall("JqueryMagnific"); 
-			//$this->config->scripts->add($this->config->urls->CronjobDatabaseBackup."CronjobDatabaseBackup.js");
 		}
 		parent::init();
 	}
