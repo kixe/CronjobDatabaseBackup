@@ -4,7 +4,7 @@ CRONJOB DATABASE BACKUP
 Auto backup your database periodically. Set the cycle interval in settings.  
 Use 'Process Database Backup Module' to restore from backup or delete them.  
 This module could slow down your processes since backups may take some time,  
-depending on how much there is to backup.  
+depending on how much there is to backup.
 
 This cronjob (hooks on *LazyCron*) is executed by a call to module: *ProcessPageView*.   
 Runs only if current user has db-backup permission. Permission will be added with module installation. Assign the permission to the roles which should trigger the process.  
@@ -13,7 +13,7 @@ Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
 + **Backup Cycle Time**  
-Select a cycle time cronjob will be executed. (default: never)  
+Select a cycle time cronjob will be executed. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Backup Name**  
 Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique.  
 + **Storage Path**  

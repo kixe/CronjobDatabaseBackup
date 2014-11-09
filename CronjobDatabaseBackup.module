@@ -21,29 +21,32 @@
 class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 	public static function getModuleInfo() {
-		return array(
+
+		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 101,
-			'summary' => __("Periodic automatic backup of the database. Runs only if current user has db-backup permission to prevent slowing down processes for frontend user (guest). Set interval in settings. Use 'Process Database Backup Module' to restore data or delete backups."),
+			'version' => 102,
+			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
 			'author' => 'kixe',
 			'license' => 'GNU-GPLv3',
 			'permission' => 'db-backup', // loggedin User must have this permission
-			'permissions'=> array('db-backup' => 'Manage database backups (recommended for superuser only)'),
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
 			'requires' => array(
 					'LazyCron',
-					//'ProcessDatabaseBackups' // recommended but not necessary
+					//'ProcessDatabaseBackups' // recommended but not really necessary
 					),
 			'icon' => 'database'
 		);
+		
+		if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => 'Manage database backups (recommended for superuser only)');
+		return $infoArray;
 	}
 
 
 	static public function getDefaultConfig() {
 		return array(
-			'cycle' => 0, // default set to never backup
+			'cycle' => 'every4Weeks', // default set to 4 weeks
 		);
 	}
 
@@ -146,6 +149,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
 		$f->label = __("Backup Cycle Time");
+		$f->icon = 'history'; 
+ 		//$f->icon = 'refresh'; 
         $f->description = __("Select a cycle time for your backups.");
         $f->notes = __("Leave blank to disable automatic backup. The cronjob to backup your database executes only if current user has db-backup permission.");
 		$f->addOptions(array(
@@ -164,6 +169,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->attr('name', 'backup_name');
 		$f->set('collapsed',$data['backup_name']?false:true);
 		$f->set('required', false);
+		$f->icon = 'file-o'; 
 		$f->label = __('Backup Name'); 
 		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
 		$f->notes = __('If omitted the name of the database will be used (config). Anyway a unique filename will be automatically generated: [name]-[n].sql.'); 
@@ -175,6 +181,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->attr('name', 'field_storage_path');
 		$f->set('collapsed',$data['field_storage_path']?false:true);
 		$f->set('required', false);
+		$f->icon = 'folder-open-o'; 
 		$f->label = __('Storage Path'); 
 		$f->description = __("Path to custom storage directory.");
 		$f->notes = __("Leave this blank for storage under default path: $def");
@@ -205,8 +212,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public function ___uninstall() {
 		$userpath = ($this->data['field_storage_path'])?"] and in [".trim($this->data['field_storage_path'],'/'):"";
 		$defpath = $this->backupPath(true);
-		$this->error(sprintf(__("Please note that maybe backup files in [%s%s] remain. If you don't want them there, please remove them manually."),$defpath,$userpath),Notice::warning); 
+		$this->error(sprintf(__("Please note that maybe backup files remain in folder [%s%s]. If you don't want them there, please remove them manually."),$defpath,$userpath),Notice::warning); 
+		if ($this->wire('modules')->isInstalled('ProcessDatabaseBackups')) $this->message('Module \'Process Database Backups\' remains installed');
 		parent::___uninstall();
 	}
-
 }
