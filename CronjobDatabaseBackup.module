@@ -34,12 +34,13 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
 			'requires' => array(
 					'LazyCron',
-					//'ProcessDatabaseBackups' // recommended but not really necessary
+					//'ProcessDatabaseBackups' // recommended but not necessary
 					),
 			'icon' => 'database'
 		);
 		
-		if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => 'Manage database backups (recommended for superuser only)');
+		$perminfo = __('Manage database backups (recommended for superuser only)');
+		if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => $perminfo);
 		return $infoArray;
 	}
 
@@ -47,6 +48,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	static public function getDefaultConfig() {
 		return array(
 			'cycle' => 'every4Weeks', // default set to 4 weeks
+			'backup_all' => 1
 		);
 	}
 
@@ -114,9 +116,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			$filename = $_filename . "-" . (++$n) . ".sql";
 		}
 
+		$fileinfo = $this->_("This backup was made by 'Cronjob Database Backup Module'");
 		$options = array(
 			'filename' => $filename, 
-			'description' => "This backup was made by 'Cronjob Database Backup Module'"
+			'description' => $fileinfo
 			); 
 
 		if(!$this->backup_all) {
@@ -148,20 +151,21 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
  
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
-		$f->label = __("Backup Cycle Time");
-		$f->icon = 'history'; 
- 		//$f->icon = 'refresh'; 
-        $f->description = __("Select a cycle time for your backups.");
-        $f->notes = __("Leave blank to disable automatic backup. The cronjob to backup your database executes only if current user has db-backup permission.");
+		$f->label = __("Backup Cycle Interval");
+		//$f->icon = 'history'; 
+ 		$f->icon = 'refresh'; 
+        $f->description = __("Select a time interval for automated database backups. Choose 'never' to disable");
+        $f->notes = __("The cronjob to backup your database executes only if current user has db-backup permission.");
 		$f->addOptions(array(
-			0 => __(''),
+			0 => __('never'),
 			//'every30Seconds' =>__('30 seconds'), // for development use
 			'everyDay' =>__('1 day'),
 			'everyWeek' =>__('1 week'),
 			'every2Weeks' =>__('2 weeks'),
-			'every4Weeks'  =>__('4 weeks'),
+			'every4Weeks' =>__('4 weeks'),
             ));
-        $f->value = $data['cycle'];
+        if($_POST['cycle'] && $_POST['cycle'] != $data['cycle']) $f->message(__('Backup cycle interval changed to').' '.$_POST['cycle']);
+		$f->value = $data['cycle'];
  		$fields->add($f);
 
 		$def = $config->dbName;
@@ -192,14 +196,16 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name', 'backup_all'); 
-		$f->label = __('Backup all tables?'); 
+		$f->label = __('Backup all?'); 
         $f->attr('checked', $data['backup_all'] ? 'checked' : '' );
+        $f->notes = __('Uncheck to make a selection');
 		$fields->add($f);
 
 		$f = $modules->get('InputfieldSelectMultiple'); 
 		$f->attr('name', 'tables');
-		$f->label = __('Tables'); 
-		$f->description = __('By default, the export will include all tables. If you only want certain tables to be included, select them below.'); 
+		$f->icon = 'table'; 
+		$f->label = __('Data Tables'); 
+		$f->description = __('By default, the export will include all data tables. If you only want certain tables to be included in the backup file, select them below.'); 
 		$allTables = $database->backups()->getAllTables();
 		foreach($allTables as $table) $f->addOption($table, $table); 
 		$f->attr('value', $data['tables']?$data['tables']:$allTables); 
@@ -213,7 +219,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$userpath = ($this->data['field_storage_path'])?"] and in [".trim($this->data['field_storage_path'],'/'):"";
 		$defpath = $this->backupPath(true);
 		$this->error(sprintf(__("Please note that maybe backup files remain in folder [%s%s]. If you don't want them there, please remove them manually."),$defpath,$userpath),Notice::warning); 
-		if ($this->wire('modules')->isInstalled('ProcessDatabaseBackups')) $this->message('Module \'Process Database Backups\' remains installed');
+		if ($this->wire('modules')->isInstalled('ProcessDatabaseBackups')) $this->message(__('Module \'Process Database Backups\' remains installed'));
 		parent::___uninstall();
 	}
 }

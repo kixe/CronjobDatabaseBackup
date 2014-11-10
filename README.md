@@ -12,8 +12,8 @@ Runs only if current user has db-backup permission. Permission will be added wit
 Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
-+ **Backup Cycle Time**  
-Select a cycle time cronjob will be executed. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
++ **Backup Cycle Interval**  
+Select a time interval between automated backups. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Backup Name**  
 Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique.  
 + **Storage Path**  
