@@ -32,7 +32,9 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'license' => 'GNU-GPLv3',
 			'permission' => 'db-backup', // loggedin User must have this permission
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
-			'requires' => array('LazyCron'),
+			'requires' => array(
+				'LazyCron'
+				),
 					//'ProcessDatabaseBackups' // recommended but not necessary
 			'icon' => 'database'
 		);
