@@ -34,6 +34,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
 			'requires' => array(
 					'LazyCron',
+					'ProcessWire>=2.4.15',
 					//'ProcessDatabaseBackups' // recommended but not necessary
 					),
 			'icon' => 'database'
