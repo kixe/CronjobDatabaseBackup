@@ -32,8 +32,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'license' => 'GNU-GPLv3',
 			'permission' => 'db-backup', // loggedin User must have this permission
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
-			'requires' => array('LazyCron','ProcessWire>=2.4.15'),
-					//'ProcessDatabaseBackups' // recommended but not necessary
+			'requires' => array('LazyCron','ProcessWire>=2.4.15'), // bug in ProcessModule.module (no line-breaks here!)
 			'icon' => 'database'
 		);
 		
@@ -46,7 +45,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	static public function getDefaultConfig() {
 		return array(
 			'cycle' => 'every4Weeks', // default set to 4 weeks
-			'backup_all' => 1
+			'backup_all' => 1,
+			'backup_name' => null,
+			'field_storage_path' => null,
+			'tables' => null
 		);
 	}
 
@@ -67,7 +69,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	*/
 	public function init() {
 		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
-		if ($this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
+		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle) {
 			$this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
 		}
@@ -162,7 +164,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'every2Weeks' =>__('2 weeks'),
 			'every4Weeks' =>__('4 weeks'),
             ));
-        if($_POST['cycle'] && $_POST['cycle'] != $data['cycle']) $f->message(__('Backup cycle interval changed to').' '.$_POST['cycle']);
+        if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message(__('Backup cycle interval changed to').' '.$_POST['cycle']);
 		$f->value = $data['cycle'];
  		$fields->add($f);
 
