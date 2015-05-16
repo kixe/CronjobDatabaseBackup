@@ -15,7 +15,7 @@ Each run is logged in *site/assets/logs/messages.txt*.
 + **Backup Cycle Interval**  
 Select a time interval between automated backups. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Maximum Number of Backups**  
-Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Eexecuted with each cron.    
+Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
 + **Remove backups older than**  
 Will remove backups older than selected time interval with each cron. 
 + **Backup Name**  
