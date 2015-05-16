@@ -25,7 +25,7 @@ Path to custom storage directory. If left blank or path doesn't exist default pa
 + **Tables**  
 By default, the backup will include all tables. If you only want certain tables to be included, select them from the list.  
 + **Remove backups now**  
-Select how many backups you want to keep in storage. Save to execute.  
+Select how many backups you want to keep in storage. Klick *SAVE* to execute.  
 
 ## Require
 *LazyCron.module*  
