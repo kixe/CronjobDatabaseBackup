@@ -14,12 +14,18 @@ Each run is logged in *site/assets/logs/messages.txt*.
 ## Settings
 + **Backup Cycle Interval**  
 Select a time interval between automated backups. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
++ **Maximum Number of Backups**  
+Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Eexecuted with each cron.    
++ **Remove backups older than**  
+Will remove backups older than selected time interval with each cron. 
 + **Backup Name**  
-Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique.  
+Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique. Name format syntax: # placeholder for db-name. Escape date() format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore.  
 + **Storage Path**  
 Path to custom storage directory. If left blank or path doesn't exist default pass will be used. (The Path is displayed under the field. Normally: /site/assets/backups/database/)  
 + **Tables**  
 By default, the backup will include all tables. If you only want certain tables to be included, select them from the list.  
++ **Remove backups now**  
+Select how many backups you want to keep in storage. Save to execute.  
 
 ## Require
 *LazyCron.module*  
