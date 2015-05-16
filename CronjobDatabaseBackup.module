@@ -30,6 +30,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'autoload' => true,
 			'singular' => true,
 			'author' => 'kixe',
+			'href' => 'https://processwire.com/talk/topic/8207-cronjob-database-backup/',
 			'license' => 'GNU-GPLv3',
 			'permission' => 'db-backup', // loggedin User must have this permission
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
