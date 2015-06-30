@@ -25,7 +25,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 110,
+			'version' => 111,
 			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -154,13 +154,13 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		}
 
 		$file = $this->backup->backup($options); 
-		$message = $this->_("Saved db-backup - PATH").'['.$file.'].';
+		$message = $this->_("Saved db-backup - PATH").'['.$file.']';
 		$this->message($message,Notice::logOnly);
 
 		// delete odd backups if deadline (date) or max (files)
 		if ($this->deadline || $this->max <= $this->getAll()) {
 			$removed = count($this->clean($this->max,strtotime("-{$this->deadline}")));
-			$message = __("Deleted %d backup%s.");
+			$message = __("Deleted %d backup%s");
 			$this->message(sprintf($message,$removed,($removed>1)?'s':''),Notice::logOnly); 
 		}
 	}
