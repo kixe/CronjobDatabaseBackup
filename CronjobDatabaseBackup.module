@@ -25,7 +25,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 111,
+			'version' => 112,
 			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -138,7 +138,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$allTables = $this->backup->getAllTables();
 		$database = $this->wire('database'); 
 
-		$fileinfo = $this->_("backup made by CronjobDatabaseBackup");
+		$fileinfo = "backup made by CronjobDatabaseBackup";
 		$options = array(
 			'filename' => $this->backupFilename(), 
 			'description' => $fileinfo
@@ -154,13 +154,13 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		}
 
 		$file = $this->backup->backup($options); 
-		$message = $this->_("Saved db-backup - PATH").'['.$file.']';
+		$message = "Saved db-backup - PATH[$file]";
 		$this->message($message,Notice::logOnly);
 
 		// delete odd backups if deadline (date) or max (files)
 		if ($this->deadline || $this->max <= $this->getAll()) {
 			$removed = count($this->clean($this->max,strtotime("-{$this->deadline}")));
-			$message = __("Deleted %d backup%s");
+			$message = "Deleted %d backup%s";
 			$this->message(sprintf($message,$removed,($removed>1)?'s':''),Notice::logOnly); 
 		}
 	}
@@ -218,7 +218,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$path = $this->backupPath(); 
 		$cleaned = array();	
 
-		$error_message = __("Removing %1s from %2s failed!");
+		$error_message = $this->_("Removing %1s from %2s failed!");
 		$keep = $this->keep($size,$deadline);
 		foreach(new DirectoryIterator($path) as $backup) {
 			if ($backup->getExtension() != 'sql') continue;
@@ -247,7 +247,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		if(wire('input')->post->cleanup) {
 			$removed = $cleaner->clean(wire('input')->post->cleanup);
 			$message = __("%d backups deleted successfully");
-			if (!count($removed)) $cleaner->message(__('Nothing to clean in').' '.$cleaner->backupPath(true));			
+			if (!count($removed)) $cleaner->message( __('Nothing to clean in').' '.$cleaner->backupPath(true));			
 			else $cleaner->message(sprintf($message,count($removed))); 
 		}
 		
@@ -270,15 +270,15 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->addOptions(array(
 			0 => __('never'),
 			//'every30Seconds' =>__('30 seconds'), // for development use
-			'everyHour' =>__('1 hour'),
-			'every6Hours' =>__('6 hours'),
-			'everyDay' =>__('1 day'),
-			'every2Days' =>__('2 days'),
-			'everyWeek' =>__('1 week'),
-			'every2Weeks' =>__('2 weeks'),
-			'every4Weeks' =>__('4 weeks'),
+			'everyHour' => __('1 hour'),
+			'every6Hours' => __('6 hours'),
+			'everyDay' => __('1 day'),
+			'every2Days' => __('2 days'),
+			'everyWeek' => __('1 week'),
+			'every2Weeks' => __('2 weeks'),
+			'every4Weeks' => __('4 weeks'),
             ));
-        if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message(__('Backup cycle interval changed to').' '.$_POST['cycle']);
+        if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message( __('Backup cycle interval changed to').' '.$_POST['cycle']);
 		$f->value = $data['cycle'];
  		$fields->add($f);
 
@@ -305,10 +305,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->addOptions(array(
 			null => __('never'),
 			//'1 minute' =>__('1 minute'), // for development use
-			'1 day' =>__('1 day'),
-			'1 week' =>__('1 week'),
-			'1 month' =>__('1 month'),
-			'1 year' =>__('1 year'),
+			'1 day' => __('1 day'),
+			'1 week' => __('1 week'),
+			'1 month' => __('1 month'),
+			'1 year' => __('1 year'),
             ));
 		$f->value = $data['deadline'];
  		$fields->add($f);
@@ -376,8 +376,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public function ___uninstall() {
 		$userpath = ($this->data['field_storage_path'])?"] and in [".trim($this->data['field_storage_path'],'/'):"";
 		$defpath = $this->backupPath(true);
-		$this->error(sprintf(__("Please note that maybe backup files remain in folder [%s%s]. If you don't want them there, please remove them manually."),$defpath,$userpath),Notice::warning); 
-		if ($this->wire('modules')->isInstalled('ProcessDatabaseBackups')) $this->message(__('Module \'Process Database Backups\' remains installed'));
+		$this->error(sprintf( __("Please note that maybe backup files remain in folder %s%s. If you don't want them there, please remove them manually."),$defpath,$userpath),Notice::warning); 
+		if ($this->wire('modules')->isInstalled('ProcessDatabaseBackups')) $this->message( __("Module 'Process Database Backups' remains installed"));
 		parent::___uninstall();
 	}
 }
