@@ -25,7 +25,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 112,
+			'version' => 113,
 			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -266,7 +266,6 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->label = __("Backup Cycle Interval");
  		$f->icon = 'refresh';
         $f->description = __("Select a time interval for automated database backups.");
-        $f->notes = __("The cronjob to backup your database executes only if current user has db-backup permission.");
 		$f->addOptions(array(
 			0 => __('never'),
 			//'every30Seconds' =>__('30 seconds'), // for development use
