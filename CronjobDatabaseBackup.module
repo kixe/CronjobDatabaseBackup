@@ -356,7 +356,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->icon = 'file-archive-o'; 
 		$f->label = __('Backup Name'); 
 		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
-		$f->notes = __('If omitted the name of the database will be used (config). Format syntax: # placeholder for db-name. Escape date() format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
+		$f->notes = __('If omitted the name of the database will be used (config). Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value.If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
 		$f->value = $data['backup_name'];
 		$fields->add($f); 
 
@@ -367,7 +367,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->icon = 'info-circle'; 
 		$f->label = __('Backup Fileinfo'); 
 		$f->description = __('Define custom fileinfo string here.'); 
-		$f->notes = __('Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value.'); 
+		$f->notes = __('Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value. Default: \'backup made by CronjobDatabaseBackup\''); 
 		$f->value = $data['backup_fileinfo'];
 		$fields->add($f); 
 
