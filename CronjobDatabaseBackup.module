@@ -51,6 +51,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'deadline' => null,
 			'backup_all' => 1,
 			'backup_name' => null,
+			'backup_fileinfo' => null,
 			'field_storage_path' => null,
 			'tables' => null
 		);
@@ -78,13 +79,19 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	*
 	*/
 	public function init() {
+		parent::init();
 		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
-		if ($this->cycle) {
+		if ($this->cycle == 'logoutTrigger') {
+			$this->addHookBefore("Session::logout", function() {
+				$e = new HookEvent();
+				$this->cronBackup($e);
+			});
+		}
+		else if ($this->cycle) {
 			$this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
 		}
-		parent::init();
 	}
 	
 	/**
@@ -107,16 +114,29 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	}
 
 	/**
+	* replaces placeholders for databasename (#), date function (%) and user properties ({})
+	*
+	* @param string $string
+	* @return string
+	*
+	*/
+	protected function renderInfoString($string) {
+		$string = str_replace('#',$this->wire('config')->dbName, $string);
+		if(preg_match('/^([^%]*)%?([^%]*)%?([^%]*)$/', $string, $matches)) $string = $matches[1].date($matches[2]).$matches[3];
+		$user = $this->wire('user');
+		return wirePopulateStringTags($string, $user);
+	}
+
+	/**
+	*
 	* @return string filename .sql
+	* @see renderInfoString
 	*
 	*/
 	protected function ___backupFilename() {
-		if (!$this->backup_name) $filename = $this->wire('config')->dbName;
-		else {
-			$filename = str_replace('#',$this->wire('config')->dbName,$this->backup_name);
-			if(preg_match('/^([^%]*)%?([^%]*)%?([^%]*)$/', $filename, $matches)) $filename = $matches[1].date($matches[2]).$matches[3];
-		}
-		$_filename = $filename; 
+		$filename = $this->backup_name? $this->backup_name:$this->wire('config')->dbName;
+		$filename = $this->renderInfoString($filename); 
+		$_filename = $filename;
 		$filename .= '.sql';
 		if(preg_match('/^(.+)-(\d+)$/', $_filename, $matches)) {
 			$_filename = $matches[1]; 
@@ -131,6 +151,17 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	}
 
 	/**
+	*
+	* @return string
+	* @see renderInfoString
+	*
+	*/
+	protected function ___backupFileinfo() {
+		if (!$this->backup_fileinfo) return 'backup made by CronjobDatabaseBackup';
+		return $this->renderInfoString($this->backup_fileinfo);
+	}
+
+	/**
 	* hooky dooky
 	*
 	*/
@@ -138,10 +169,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$allTables = $this->backup->getAllTables();
 		$database = $this->wire('database'); 
 
-		$fileinfo = "backup made by CronjobDatabaseBackup";
 		$options = array(
 			'filename' => $this->backupFilename(), 
-			'description' => $fileinfo
+			'description' => $this->backupFileinfo(),
+			'maxSeconds' => 120
 			); 
 
 		if(!$this->backup_all) {
@@ -153,6 +184,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			}
 		}
 
+		ignore_user_abort(true);
 		$file = $this->backup->backup($options); 
 		$message = "Saved db-backup - PATH[$file]";
 		$this->message($message,Notice::logOnly);
@@ -263,9 +295,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
-		$f->label = __("Backup Cycle Interval");
+		$f->label = __("Backup Trigger");
  		$f->icon = 'refresh';
-        $f->description = __("Select a time interval for automated database backups.");
+        $f->description = __("Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission has logged out.");
+        if ($data['cycle'] == 'logoutTrigger') $f->notes = __("The cronjob to backup your database executes only if current user has db-backup permission.");
 		$f->addOptions(array(
 			0 => __('never'),
 			//'every30Seconds' =>__('30 seconds'), // for development use
@@ -276,6 +309,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'everyWeek' => __('1 week'),
 			'every2Weeks' => __('2 weeks'),
 			'every4Weeks' => __('4 weeks'),
+			'logoutTrigger' => __('logout trigger')
             ));
         if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message( __('Backup cycle interval changed to').' '.$_POST['cycle']);
 		$f->value = $data['cycle'];
@@ -321,8 +355,19 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->icon = 'file-archive-o'; 
 		$f->label = __('Backup Name'); 
 		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
-		$f->notes = __('If omitted the name of the database will be used (config). Custom name format syntax: # placeholder for db-name. Escape date() format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
+		$f->notes = __('If omitted the name of the database will be used (config). Format syntax: # placeholder for db-name. Escape date() format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
 		$f->value = $data['backup_name'];
+		$fields->add($f); 
+
+		$f = $modules->get('InputfieldText'); 
+		$f->attr('name', 'backup_fileinfo');
+		$f->set('collapsed',$data['backup_fileinfo']?false:true);
+		$f->set('required', false);
+		$f->icon = 'info-circle'; 
+		$f->label = __('Backup Fileinfo'); 
+		$f->description = __('Define custom fileinfo string here.'); 
+		$f->notes = __('Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value.'); 
+		$f->value = $data['backup_fileinfo'];
 		$fields->add($f); 
 
 		$def = str_replace($config->paths->root,'',$database->backups()->getPath());
