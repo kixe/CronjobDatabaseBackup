@@ -85,6 +85,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle == 'logoutTrigger') {
 			$this->addHookBefore("Session::logout", function() {
+				if(!$this->wire('user')->hasPermission('db-backup')) return;
 				$e = new HookEvent();
 				$this->cronBackup($e);
 			});
