@@ -5,15 +5,14 @@ Auto backup of your database. Triggered periodically by a cycle interval or via 
 Use 'Process Database Backup Module' to restore from backup or delete them.  
 This module could slow down your processes since backups may take some time,  
 depending on how much there is to backup.
-
 This cronjob (hooks on *LazyCron*) is executed by a call to module: *ProcessPageView*.   
-Runs only if current user has db-backup permission. Permission will be added with module installation. Assign the permission to the roles which should trigger the process.  
 
 Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
 + **Backup Trigger**  
-Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission has logged out. If you don't want automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
+Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission assigned has been logged out. Permission 'db-backup' will be added with module installation.
+If you want to disable automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Maximum Number of Backups**  
 Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
 + **Remove backups older than**  

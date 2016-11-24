@@ -10,7 +10,7 @@
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
  * Database Backups
- * ProcessWire 2.x 
+ * ProcessWire 2.x, 3.x
  * Copyright (C) 2014 by Ryan Cramer 
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
@@ -25,7 +25,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 113,
+			'version' => 114,
 			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -299,7 +299,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->label = __("Backup Trigger");
  		$f->icon = 'refresh';
         $f->description = __("Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission has logged out.");
-        if ($data['cycle'] == 'logoutTrigger') $f->notes = __("The cronjob to backup your database executes only if current user has db-backup permission.");
+        if ($data['cycle'] == 'logoutTrigger') $f->notes = __("The cronjob to backup your database is triggered after logout of any user with 'db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
 			//'every30Seconds' =>__('30 seconds'), // for development use
