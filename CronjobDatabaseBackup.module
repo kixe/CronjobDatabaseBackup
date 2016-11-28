@@ -3,9 +3,11 @@
 /**
  * ProcessWire Module Cronjob Database Backup
  * 
- * made by kixe (Christoph Thelen) 05.11.14
- * Licensed under GNU/GPL v3
- * update 16.05.2015
+ * @author kixe (Christoph Thelen) 2014/11/05
+ * @license Licensed under GNU/GPL v3
+ * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
+ * @version 1.1.5
+ * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -25,7 +27,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 114,
+			'version' => 115,
 			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -292,7 +294,16 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         $f = $modules->get("InputfieldMarkup");
 		$markupText = __("%d backups are currently stored in folder %s");
         $f->markupText = '<strong>'.sprintf($markupText,$cleaner->getAll(),$path).'</strong>';
- 		$fields->add($f);
+
+ 		if($cleaner->getAll() && wire('modules')->isInstalled('ProcessDatabaseBackups')) {
+        	$b = $modules->get('InputfieldButton'); 
+			$b->value = __('Edit Backups'); 
+			$b->icon = 'database';
+			$b->href = wire('pages')->get('process='.$modules->getModuleInfo('ProcessDatabaseBackups')['id'])->url; 
+			$b->addClass('head_button_clone'); 
+			$f->markupText .= '<p>'.$b->render().'</p>';
+		}
+		$fields->add($f);
 
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
