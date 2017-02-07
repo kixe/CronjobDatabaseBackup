@@ -6,8 +6,8 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.5
- * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
+ * @version 1.1.6
+ * @since 1.1.6 added option to specify on which host to run (@arjenblokzijl) 2017/02/07
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -55,7 +55,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'backup_name' => null,
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
-			'tables' => null
+			'tables' => null,
+			'hostnames' => array()
 		);
 	}
 
@@ -84,6 +85,17 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		parent::init();
 		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
+
+		/**
+		 * Proceed if
+		 * - Hostnames is not checked
+		 * - Hostnames are set in module config and is current hostname
+		 *
+		 */
+		if (!(count($this->hostnames) == 0 || (count($this->hostnames) && in_array($this->wire('config')->httpHost, $this->hostnames)))) {
+			return;
+		}
+
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle == 'logoutTrigger') {
 			$this->addHookBefore("Session::logout", function() {
@@ -425,6 +437,19 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->description = __('Select the number of files that are to remain in the storage directory.');
 		$f->notes = __("Save to execute the process");
 		$fields->add($f); 
+		
+		$hosts = $config->httpHosts;
+		if(!count($hosts)) $hosts = array($config->httpHost);
+		$f = wire('modules')->get('InputfieldCheckboxes');
+		$f->attr('name', 'hostnames');
+		$f->icon = 'server';
+		foreach($hosts as $host) $f->addOption($host, $host);
+		$f->attr('value', is_array($data['hostnames']) ? $data['hostnames'] : array());
+		$f->label = __('Hostnames');
+		$f->description = __('Check boxes for each hostname you wish to run the cron. If none are checked, then the cron will be run on all hosts.'); // Hosts description
+		$f->notes = __('These are the hostnames listed in your $config->httpHosts setting. To add more hosts, edit your /site/config.php file.'); // Hosts notes
+		$f->collapsed = Inputfield::collapsedBlank;
+		$fields->add($f);
 
 		return $fields;
 	}
