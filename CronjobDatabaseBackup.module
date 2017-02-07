@@ -6,8 +6,8 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.5
- * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
+ * @version 1.1.6
+ * @since 1.1.6 added option to specify on which host to run (@arjenblokzijl) 2017/02/07
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
