@@ -11,7 +11,7 @@ Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
 + **Backup Trigger**  
-Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission assigned has been logged out. Permission 'db-backup' will be added with module installation.
+Select a time interval for automated database backups or one of the options to force backup after a user (role) with 'trigger-db-backup' permission assigned has been logged in or logged out. Permission 'trigger-db-backup' will be added with module installation.
 If you want to disable automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Maximum Number of Backups**  
 Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
@@ -28,11 +28,10 @@ By default, the backup will include all tables. If you only want certain tables 
 + **Remove backups now**  
 Select how many backups you want to keep in storage. Klick *SAVE* to execute.  
 
-## Require
+## Requirements
 *LazyCron.module*  
 
-Not a real requirement but *ProcessDatabaseBackups.module* is useful to restore the database from a file or to delete older backup files.  
-I recommend to use both modules.  
+Not a real requirement but *ProcessDatabaseBackups.module* is useful to restore the database from a file or to delete older backup files. 
 
 ## Thanks :-)
 I took some nice code from *ProcessDatabaseBackups.module*.  Thanks to Ryan!  
