@@ -6,8 +6,9 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.5
+ * @version 1.1.6
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
+ * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -18,7 +19,6 @@
  * 
  * http://processwire.com
  *
- *
  */
 
 class CronjobDatabaseBackup extends Process implements ConfigurableModule {
@@ -27,21 +27,21 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 115,
-			'summary' => __("Periodic automatic backup of the database. Set interval in settings."),
+			'version' => 116,
+			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
 			'author' => 'kixe',
 			'href' => 'https://processwire.com/talk/topic/8207-cronjob-database-backup/',
 			'license' => 'GNU-GPLv3',
-			'permission' => 'db-backup', // loggedin User must have this permission
+			'permissions' => array('trigger-db-backup' => 'Trigger database backup when a user logs in or logs out (CronjobDatabaseBackup)'),
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html',
-			'requires' => array('LazyCron','ProcessWire>=2.4.15'), // bug in ProcessModule.module (no line-breaks here!)
+			'requires' => array('LazyCron','ProcessWire>=2.4.15'),
 			'icon' => 'database'
 		);
 		
-		$perminfo = __('Manage database backups (recommended for superuser only)');
-		if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => $perminfo);
+		// $perminfo = __('Manage database backups (recommended for superuser only)');
+		// if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => $perminfo);
 		return $infoArray;
 	}
 
@@ -81,18 +81,26 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	*
 	*/
 	public function init() {
+		if (!$this->cycle) return;
 		parent::init();
 		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
-		if ($this->cycle == 'logoutTrigger') {
-			$this->addHookBefore("Session::logout", function() {
-				if(!$this->wire('user')->hasPermission('db-backup')) return;
-				$e = new HookEvent();
-				$this->cronBackup($e);
+		if ($this->cycle == 'loginTrigger') {
+			$this->addHookAfter("Session::loginSuccess", function($e) {
+				$user = $e->arguments[0];
+				if(!$user->hasPermission('trigger-db-backup')) return;
+				$this->cronBackup();
 			});
 		}
-		else if ($this->cycle) {
+		else if ($this->cycle == 'logoutTrigger') {
+			$this->addHookAfter("Session::logoutSuccess", function($e) {
+				$user = $e->arguments[0];
+				if(!$user->hasPermission('trigger-db-backup')) return;
+				$this->cronBackup();
+			});
+		}
+		else {
 			$this->addHook("LazyCron::{$this->cycle}", $this, 'cronBackup');
 		}
 	}
@@ -165,10 +173,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	}
 
 	/**
-	* hooky dooky
+	*
 	*
 	*/
-	public function cronBackup(HookEvent $e) {
+	protected function cronBackup() {
 		$allTables = $this->backup->getAllTables();
 		$database = $this->wire('database'); 
 
@@ -309,11 +317,12 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         $f->attr('name', 'cycle');
 		$f->label = __("Backup Trigger");
  		$f->icon = 'refresh';
-        $f->description = __("Select a time interval for automated database backups or the option 'logout trigger' to force download after a user with 'db-backup' permission has logged out.");
-        if ($data['cycle'] == 'logoutTrigger') $f->notes = __("The cronjob to backup your database is triggered after logout of any user with 'db-backup' permission.");
+        $f->description = __("Select a time interval for automated database backups or a trigger option when a user logs in or logs out.");
+        if ($data['cycle'] == 'loginTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull login of any user with 'trigger-db-backup' permission.");
+        else if ($data['cycle'] == 'logoutTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull logout of any user with 'trigger-db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
-			//'every30Seconds' =>__('30 seconds'), // for development use
+			// 'every30Seconds' => __('30 seconds'), // for development use
 			'everyHour' => __('1 hour'),
 			'every6Hours' => __('6 hours'),
 			'everyDay' => __('1 day'),
@@ -321,6 +330,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'everyWeek' => __('1 week'),
 			'every2Weeks' => __('2 weeks'),
 			'every4Weeks' => __('4 weeks'),
+			'loginTrigger' => __('login trigger'),
 			'logoutTrigger' => __('logout trigger')
             ));
         if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message( __('Backup cycle interval changed to').' '.$_POST['cycle']);
