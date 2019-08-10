@@ -176,9 +176,9 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	*
 	*
 	*/
-	protected function cronBackup() {
+	public function cronBackup() {
 		$allTables = $this->backup->getAllTables();
-		$database = $this->wire('database'); 
+		$database = $this->wire('database');
 
 		$options = array(
 			'filename' => $this->backupFilename(), 
