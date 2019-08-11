@@ -11,7 +11,7 @@ Each run is logged in *site/assets/logs/messages.txt*.
 
 ## Settings
 + **Backup Trigger**  
-Select a time interval for automated database backups or one of the options to force backup after a user (role) with 'trigger-db-backup' permission assigned has been logged in or logged out. Permission 'trigger-db-backup' will be added with module installation.
+Select a time interval for automated database backups or one of the options to force backup after a user (role) with 'trigger-db-backup' permission assigned has been logged in or logged out. Permission 'trigger-db-backup' will be added with module installation. You just need to assign it to certain roles. 
 If you want to disable automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
 + **Maximum Number of Backups**  
 Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
