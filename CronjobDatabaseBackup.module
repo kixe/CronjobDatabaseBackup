@@ -55,7 +55,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'backup_name' => null,
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
-			'tables' => null
+			'tables' => null,
+			'tables_structure_only' => null
 		);
 	}
 
@@ -186,7 +187,15 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'maxSeconds' => 120
 			); 
 
-		if(!$this->backup_all) {
+		if($this->backup_all && $this->tables_structure_only) {
+			// exclude table data from export, but still create tables
+			$options['excludeExportTables'] = array();
+			foreach($this->tables_structure_only as $table) {
+				if(!isset($allTables[$table])) continue; 
+				$options['excludeExportTables'][] = $allTables[$table];
+			}
+		}
+		else if(!$this->backup_all && $this->tables) {
 			// selective tables
 			$options['tables'] = array();
 			foreach($this->tables as $table) {
@@ -425,6 +434,18 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		foreach($allTables as $table) $f->addOption($table, $table); 
 		$f->attr('value', $data['tables']?$data['tables']:$allTables); 
 		$f->showIf = 'backup_all=0';
+		$fields->add($f);
+
+		$f = $modules->get('InputfieldSelectMultiple'); 
+		$f->attr('name', 'tables_structure_only');
+		$f->icon = 'list-alt'; 
+		$f->label = __('Export Tables Without Content'); 
+		$f->description = __('By default, the export will include the data inside all tables. If you only want to backup the table structure without the data for some tables, select them below.'); 
+		$f->notes = __('This can be useful for security sensitive data or the `sessions` table on sites with a lot of visitors.'); 
+		$allTables = $database->backups()->getAllTables();
+		foreach($allTables as $table) $f->addOption($table, $table); 
+		$f->attr('value', $data['tables_structure_only']?$data['tables_structure_only']:[]); 
+		$f->set('collapsed',$data['tables_structure_only']?false:true);
 		$fields->add($f);
 
 		$f = $modules->get('InputfieldInteger'); 
