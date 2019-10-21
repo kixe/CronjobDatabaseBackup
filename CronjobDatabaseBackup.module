@@ -408,7 +408,9 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name', 'backup_all'); 
-		$f->label = __('Backup all?'); 
+		$f->icon = 'cube'; 
+		$f->label = __('Backup Contents'); 
+		$f->label2 = __('Backup all tables?'); 
         $f->attr('checked', $data['backup_all'] ? 'checked' : '' );
         $f->notes = __('Uncheck to make a selection');
 		$f->set('collapsed',$data['backup_all']?false:true);
