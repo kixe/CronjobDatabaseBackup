@@ -24,7 +24,7 @@ Define custom fileinfo string here. Format syntax: # placeholder for db-name. Es
 + **Storage Path**  
 Path to custom storage directory. If left blank or path doesn't exist default pass will be used. (The Path is displayed under the field. Normally: /site/assets/backups/database/)  
 + **Tables**  
-By default, the backup will include all tables. If you only want certain tables to be included, select them from the list.  
+By default, the backup contains all tables. If you only want to include specific tables, you can select them individually, including the option to only back up the table structure for some tables without saving the data.  
 + **Remove backups now**  
 Select how many backups you want to keep in storage. Klick *SAVE* to execute.  
 

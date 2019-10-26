@@ -338,7 +338,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         else if ($data['cycle'] == 'logoutTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull logout of any user with 'trigger-db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
-			'every30Seconds' => __('30 seconds'), // for development use
+			// 'every30Seconds' => __('30 seconds'), // for development use
 			'everyHour' => __('1 hour'),
 			'every6Hours' => __('6 hours'),
 			'everyDay' => __('1 day'),
