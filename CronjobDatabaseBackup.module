@@ -504,7 +504,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->icon = 'refresh';
 		$f->label = __('Automatically add newly created fields to the setup.'); 
 		$f->attr('checked', $data['auto_add_new_fields']? 'checked' : '' );
-		$f->notes = __('If the check box is cleared, a newly created field will not be part of backups done by this module until manually added (checked) in the previous fields.');
+		$f->notes = __('If the checkbox is cleared, a newly created field will not be part of an individual setup for backups done by this module until manually added (checked) in the previous fields.');
 		$f->set('collapsed',$data['auto_add_new_fields']?false:true);
 		$f->showIf = 'backup_all=0';
 		$fields->add($f);
