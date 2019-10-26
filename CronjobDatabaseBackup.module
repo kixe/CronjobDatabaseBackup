@@ -6,9 +6,10 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.6
+ * @version 1.1.7
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
+ * @since 1.1.7 added option to export structure without data for specified tables #2 thanks to @philippdaun 2019/10/26
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -27,7 +28,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 116,
+			'version' => 117,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -52,11 +53,12 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'max' => null,
 			'deadline' => null,
 			'backup_all' => 1,
+			'backup_all_content' => 1,
 			'backup_name' => null,
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
-			'tables' => null,
-			'tables_structure_only' => null
+			'tables' => array(),
+			'tables_content' => array()
 		);
 	}
 
@@ -84,7 +86,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public function init() {
 		if (!$this->cycle) return;
 		parent::init();
-		$this->backup = $this->wire('database')->backups(); //WireDatabaseBackup Class
+		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle == 'loginTrigger') {
@@ -187,20 +189,25 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'maxSeconds' => 120
 			); 
 
-		if($this->backup_all && $this->tables_structure_only) {
+		/*
+		if($this->backup_all && !$this->backup_all_content) {
 			// exclude table data from export, but still create tables
-			$options['excludeExportTables'] = array();
-			foreach($this->tables_structure_only as $table) {
-				if(!isset($allTables[$table])) continue; 
-				$options['excludeExportTables'][] = $allTables[$table];
-			}
+			$options['excludeExportTables'] = $allTables;
 		}
-		else if(!$this->backup_all && $this->tables) {
-			// selective tables
-			$options['tables'] = array();
-			foreach($this->tables as $table) {
-				if(!isset($allTables[$table])) continue; 
-				$options['tables'][] = $allTables[$table];
+		*/
+
+		if(!$this->backup_all && $this->tables) {
+			// backup only selected tables
+			$options['tables'] = $this->tables;
+			// exclude table data from export for all selected tables
+			if (empty($this->tables_content)) $options['excludeExportTables'] = $this->tables;
+			// exclude table data from export for some of the selected tables
+			else {
+				$options['excludeExportTables'] = array();
+				foreach($this->tables as $table) {
+					if (in_array($table, $this->tables_content)) continue;
+					$options['excludeExportTables'][] = $table;
+				}
 			}
 		}
 
@@ -331,7 +338,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         else if ($data['cycle'] == 'logoutTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull logout of any user with 'trigger-db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
-			// 'every30Seconds' => __('30 seconds'), // for development use
+			'every30Seconds' => __('30 seconds'), // for development use
 			'everyHour' => __('1 hour'),
 			'every6Hours' => __('6 hours'),
 			'everyDay' => __('1 day'),
@@ -417,36 +424,71 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name', 'backup_all'); 
-		$f->icon = 'cube'; 
-		$f->label = __('Backup Contents'); 
-		$f->label2 = __('Backup all tables?'); 
+		$f->icon = 'cube';
+		$f->label = __('Backup all tables?'); 
         $f->attr('checked', $data['backup_all'] ? 'checked' : '' );
-        $f->notes = __('Uncheck to make a selection');
+        $f->notes = __('Uncheck to make a selection.');
 		$f->set('collapsed',$data['backup_all']?false:true);
+		// $f->columnWidth = 50;
 		$fields->add($f);
 
-		$f = $modules->get('InputfieldSelectMultiple'); 
+		/*
+		$f = $modules->get('InputfieldCheckbox');
+		$f->attr('name', 'backup_all_content'); 
+		$f->icon = 'sitemap'; 
+		$f->label = __('Include Contents'); 
+        $f->attr('checked', $data['backup_all_content'] ? 'checked' : '' );
+        $f->notes = __('Uncheck if you only want to backup the table structure without the data.');
+		$f->showIf = 'backup_all=1';
+		$f->columnWidth = 50;
+		$fields->add($f);
+		*/
+
+		$f = $modules->get('InputfieldCheckboxes'); 
+		$f->optionColumns = 3;
 		$f->attr('name', 'tables');
 		$f->icon = 'table'; 
-		$f->label = __('Data Tables'); 
-		$f->description = __('By default, the export will include all data tables. If you only want certain tables to be included in the backup file, select them below.'); 
+		$f->label = __('Export Tables'); 
+		$f->description = __('By default, the export will include all tables. If you only want certain tables to be included in the backup file, select them below.'); 
 		$allTables = $database->backups()->getAllTables();
-		foreach($allTables as $table) $f->addOption($table, $table); 
+
+		foreach($allTables as $table) $f->addOption($table, $table);
 		$f->attr('value', $data['tables']?$data['tables']:$allTables); 
 		$f->showIf = 'backup_all=0';
 		$fields->add($f);
 
-		$f = $modules->get('InputfieldSelectMultiple'); 
-		$f->attr('name', 'tables_structure_only');
+		$f = $modules->get('InputfieldCheckboxes'); 
+		$f->optionColumns = 3;
+		$f->attr('name', 'tables_content');
 		$f->icon = 'list-alt'; 
-		$f->label = __('Export Tables Without Content'); 
-		$f->description = __('By default, the export will include the data inside all tables. If you only want to backup the table structure without the data for some tables, select them below.'); 
-		$f->notes = __('This can be useful for security sensitive data or the `sessions` table on sites with a lot of visitors.'); 
+		$f->label = __('Export Tables Content'); 
+		$f->description = __('By default, the export will include the data inside the tables you selected above. If you only want to backup the table structure without the data for some tables, unselect them below.'); 
+		$f->notes = __('This option can be useful for security sensitive data or the `sessions` table on sites with a lot of visitors. You can not export data without the structure. Therefore tables are not selectable if they are unchecked in the previous field.'); 
 		$allTables = $database->backups()->getAllTables();
-		foreach($allTables as $table) $f->addOption($table, $table); 
-		$f->attr('value', $data['tables_structure_only']?$data['tables_structure_only']:[]); 
-		$f->set('collapsed',$data['tables_structure_only']?false:true);
+
+		if (empty($data['tables'])) {
+			$value = $allTables;
+			foreach($allTables as $table) $f->addOption($table, $table);
+
+		}
+		else {
+			foreach($allTables as $table) {
+				$options = array();
+				if (!in_array($table, $data['tables'])) {
+					if (in_array($table, $data['tables_content'])) {
+						$data['tables_content'] = array_diff($data['tables_content'], array($table));
+					}
+					$options = array('disabled' => 'disabled');					
+				}
+				$f->addOption($table, $table, $options);
+			}
+			$value = $data['tables_content']?$data['tables_content']:[];
+		}
+
+		$f->attr('value', $value);
+		$f->set('collapsed',false);
 		$fields->add($f);
+		$f->showIf = 'backup_all=0';
 
 		$f = $modules->get('InputfieldInteger'); 
 		$f->attr('name', 'cleanup'); 
