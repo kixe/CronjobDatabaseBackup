@@ -501,7 +501,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name', 'auto_add_new_fields'); 
-		$f->icon = 'cube';
+		$f->icon = 'refresh';
 		$f->label = __('Automatically add newly created fields to the setup.'); 
 		$f->attr('checked', $data['auto_add_new_fields']? 'checked' : '' );
 		$f->notes = __('If the check box is cleared, a newly created field will not be part of backups done by this module until manually added (checked) in the previous fields.');
