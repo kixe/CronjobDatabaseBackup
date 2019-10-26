@@ -6,10 +6,11 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.7
+ * @version 1.1.8
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
  * @since 1.1.7 added option to export structure without data for specified tables #2 thanks to @philippdaun 2019/10/26
+ * @since 1.1.8 added option to automatically add newly created fields to an individual selection of tables 2019/10/26
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -28,7 +29,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 117,
+			'version' => 118,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -55,7 +56,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
 			'tables' => array(),
-			'tables_content' => array()
+			'tables_content' => array(),
+			'auto_add_new_fields' => 1
 		);
 	}
 
@@ -83,6 +85,35 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	public function init() {
 		if (!$this->cycle) return;
 		parent::init();
+
+		// add newly created fields if auto_add_new_fields is enabled
+		if ($this->auto_add_new_fields) {
+			$this->addHookAfter('Fieldtype::createField', function(HookEvent $event) {
+				$modules = $this->wire('modules');
+				if ($event->return) {
+					$newField = $event->arguments(0);
+					// Getting, modifying and saving module config data
+					$data = $modules->getConfig('CronjobDatabaseBackup');
+					$data['tables'][] = $newField->table;
+					$data['tables_content'][] = $newField->table;
+					$modules->saveConfig('CronjobDatabaseBackup', $data);
+				}
+			});
+		}
+
+		// remove deleted fields
+		$this->addHookAfter('Fieldtype::deleteField', function(HookEvent $event) {
+			$modules = $this->wire('modules');
+			if ($event->return) {
+		 		$delField = $event->arguments(0);
+		 		// Getting, modifying and saving module config data
+				$data = $modules->getConfig('CronjobDatabaseBackup');
+				$data['tables_content'] = array_diff($data['tables_content'], array($delField->table));
+				$data['tables'] = array_diff($data['tables'], array($delField->table));
+				$modules->saveConfig('CronjobDatabaseBackup', $data);
+			}
+		});
+
 		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
@@ -417,7 +448,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->icon = 'cube';
 		$f->label = __('Backup all tables?'); 
 		$f->attr('checked', $data['backup_all'] ? 'checked' : '' );
-		$f->notes = __('Uncheck to make a selection.');
+		$f->notes = $data['backup_all']? __('Uncheck to make an individual selection.') :
+		__('Check to disable the selection below.');
 		$f->set('collapsed',$data['backup_all']?false:true);
 		$fields->add($f);
 
@@ -464,8 +496,18 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$f->attr('value', $value);
 		$f->set('collapsed',false);
-		$fields->add($f);
 		$f->showIf = 'backup_all=0';
+		$fields->add($f);
+
+		$f = $modules->get('InputfieldCheckbox');
+		$f->attr('name', 'auto_add_new_fields'); 
+		$f->icon = 'cube';
+		$f->label = __('Automatically add newly created fields to the setup.'); 
+		$f->attr('checked', $data['auto_add_new_fields']? 'checked' : '' );
+		$f->notes = __('If the check box is cleared, a newly created field will not be part of backups done by this module until manually added (checked) in the previous fields.');
+		$f->set('collapsed',$data['auto_add_new_fields']?false:true);
+		$f->showIf = 'backup_all=0';
+		$fields->add($f);
 
 		$f = $modules->get('InputfieldInteger'); 
 		$f->attr('name', 'cleanup'); 
