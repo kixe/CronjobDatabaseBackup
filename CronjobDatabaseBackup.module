@@ -53,7 +53,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'max' => null,
 			'deadline' => null,
 			'backup_all' => 1,
-			'backup_all_content' => 1,
+			// 'backup_all_content' => 1,
 			'backup_name' => null,
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
