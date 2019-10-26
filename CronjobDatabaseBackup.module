@@ -40,9 +40,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'requires' => array('LazyCron','ProcessWire>=2.4.15'),
 			'icon' => 'database'
 		);
-		
-		// $perminfo = __('Manage database backups (recommended for superuser only)');
-		// if(!wire('modules')->isInstalled('ProcessDatabaseBackups')) $infoArray['permissions'] = array('db-backup' => $perminfo);
+
 		return $infoArray;
 	}
 
@@ -53,7 +51,6 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'max' => null,
 			'deadline' => null,
 			'backup_all' => 1,
-			// 'backup_all_content' => 1,
 			'backup_name' => null,
 			'backup_fileinfo' => null,
 			'field_storage_path' => null,
@@ -188,13 +185,6 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'description' => $this->backupFileinfo(),
 			'maxSeconds' => 120
 			); 
-
-		/*
-		if($this->backup_all && !$this->backup_all_content) {
-			// exclude table data from export, but still create tables
-			$options['excludeExportTables'] = $allTables;
-		}
-		*/
 
 		if(!$this->backup_all && $this->tables) {
 			// backup only selected tables
@@ -429,20 +419,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         $f->attr('checked', $data['backup_all'] ? 'checked' : '' );
         $f->notes = __('Uncheck to make a selection.');
 		$f->set('collapsed',$data['backup_all']?false:true);
-		// $f->columnWidth = 50;
 		$fields->add($f);
-
-		/*
-		$f = $modules->get('InputfieldCheckbox');
-		$f->attr('name', 'backup_all_content'); 
-		$f->icon = 'sitemap'; 
-		$f->label = __('Include Contents'); 
-        $f->attr('checked', $data['backup_all_content'] ? 'checked' : '' );
-        $f->notes = __('Uncheck if you only want to backup the table structure without the data.');
-		$f->showIf = 'backup_all=1';
-		$f->columnWidth = 50;
-		$fields->add($f);
-		*/
 
 		$f = $modules->get('InputfieldCheckboxes'); 
 		$f->optionColumns = 3;
