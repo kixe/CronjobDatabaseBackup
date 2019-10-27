@@ -6,11 +6,12 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.8
+ * @version 1.1.9
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
  * @since 1.1.7 added option to export structure without data for specified tables #2 thanks to @philippdaun 2019/10/26
  * @since 1.1.8 added option to automatically add newly created fields to an individual selection of tables 2019/10/26
+ * @since 1.1.9 added option select/ deselect all tables in one click for individual selection of tables 2019/10/27
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -29,7 +30,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 118,
+			'version' => 119,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -112,6 +113,14 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 				$data['tables'] = array_diff($data['tables'], array($delField->table));
 				$modules->saveConfig('CronjobDatabaseBackup', $data);
 			}
+		});
+
+		// hook to add checkbox to select/ deselect all
+		$this->addHookAfter('InputfieldCheckboxes::render', function(HookEvent $event) {
+			if ($event->object->forModule != 'CronjobDatabaseBackup') return;
+			$markup = $event->return;
+			$checkbox = '<label><input data-for=".'. $event->object->id . '" type="checkbox" class="uk-checkbox check" value="0"/> <strong class="pw-no-select">' . __('select/ deselect all') . '</strong></label>';
+			$event->return =  $checkbox . $markup;
 		});
 
 		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
@@ -456,6 +465,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f = $modules->get('InputfieldCheckboxes'); 
 		$f->optionColumns = 3;
 		$f->attr('name', 'tables');
+		$f->set('forModule', 'CronjobDatabaseBackup'); // identifier for hook @see init
 		$f->icon = 'table'; 
 		$f->label = __('Export Tables'); 
 		$f->description = __('By default, the export will include all tables. If you only want certain tables to be included in the backup file, select them below.'); 
@@ -469,6 +479,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f = $modules->get('InputfieldCheckboxes'); 
 		$f->optionColumns = 3;
 		$f->attr('name', 'tables_content');
+		$f->set('forModule', 'CronjobDatabaseBackup'); // identifier for hook @see init
 		$f->icon = 'list-alt'; 
 		$f->label = __('Export Tables Content'); 
 		$f->description = __('By default, the export will include the data inside the tables you selected above. If you only want to backup the table structure without the data for some tables, unselect them below.'); 
@@ -491,7 +502,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 				}
 				$f->addOption($table, $table, $options);
 			}
-			$value = $data['tables_content']?$data['tables_content']:[];
+			// we expect a minimum of data
+			$value = $data['tables_content']? $data['tables_content'] : $data['tables'];
 		}
 
 		$f->attr('value', $value);
