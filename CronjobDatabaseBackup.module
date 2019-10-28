@@ -6,12 +6,13 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.1.9
+ * @version 1.2.0
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
  * @since 1.1.7 added option to export structure without data for specified tables #2 thanks to @philippdaun 2019/10/26
  * @since 1.1.8 added option to automatically add newly created fields to an individual selection of tables 2019/10/26
  * @since 1.1.9 added option select/ deselect all tables in one click for individual selection of tables 2019/10/27
+ * @since 1.2.0 fixed bug backup property not set if backup trigger is disabled (cycle=0) 2019/10/28
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -30,7 +31,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 119,
+			'version' => 120,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -84,7 +85,6 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	*
 	*/
 	public function init() {
-		if (!$this->cycle) return;
 		parent::init();
 
 		// add newly created fields if auto_add_new_fields is enabled
@@ -124,6 +124,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		});
 
 		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
+		if (!$this->cycle) return;
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
 		if ($this->cycle == 'loginTrigger') {
