@@ -1,5 +1,5 @@
 jQuery(document).ready(function($) {
-	$('.InputfieldCheckboxes input:checkbox.check').click(function() {
+	$("form[action*='CronjobDatabaseBackup'] .InputfieldCheckboxes input:checkbox.check").click(function() {
 		var checked = !$(this).data('checked');
 		var parent = $(this).data('for');
 		var boxes = $(parent + '.InputfieldCheckboxes .InputfieldCheckboxesColumns input:checkbox[disabled!=\'disabled\']');
@@ -17,7 +17,7 @@ jQuery(document).ready(function($) {
 		$(this).val(checked ? 1 : 0 )
 		$(this).data('checked', checked);
     });
-    $('.Inputfield_tables.InputfieldCheckboxes .InputfieldCheckboxesColumns input:checkbox').click(function() {
+    $("form[action*='CronjobDatabaseBackup'] .Inputfield_tables.InputfieldCheckboxes .InputfieldCheckboxesColumns input:checkbox").click(function() {
 		var val = $(this).val();
 		var checked = $(this).prop('checked');
 		var box = $('.Inputfield_tables_content.InputfieldCheckboxes .InputfieldCheckboxesColumns input:checkbox[value=\'' + val + '\']');
