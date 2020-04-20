@@ -6,15 +6,16 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.2.1
+ * @version 1.2.2
  *
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
  * @since 1.1.7 added option to export structure without data for specified tables #2 thanks to @philippdaun 2019/10/26
  * @since 1.1.8 added option to automatically add newly created fields to an individual selection of tables 2019/10/26
  * @since 1.1.9 added option select/ deselect all tables in one click for individual selection of tables 2019/10/27
- * @since 1.2.0 fixed bug backup property not set if backup trigger is disabled (cycle=0) 2019/10/28
- * @since 1.2.1 fixed bug load assets (js) only in Module Edit UI 2020/03/20
+ * @since 1.2.0 fixed bug: backup property not set if backup trigger is disabled (cycle=0) 2019/10/28
+ * @since 1.2.1 fixed bug: load assets (js) only in Module Edit UI 2020/03/20
+ * @since 1.2.2 fixed bug: custom storage path not set 2020/04/20
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -33,7 +34,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 121,
+			'version' => 122,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -129,7 +130,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
 		if (!$this->cycle) return;
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
-		if ($this->field_storage_path && $this->checkPath($this->wire('config')->paths->root.$this->field_storage_path)) $this->backup->setPath($this->wire('config')->paths->root.ltrim($this->field_storage_path,"/"));
+		$customPath = self::checkPath($this->wire('config')->paths->root.$this->field_storage_path);
+		if ($this->field_storage_path && $customPath) $this->backup->setPath($customPath);
 		if ($this->cycle == 'loginTrigger') {
 			$this->addHookAfter("Session::loginSuccess", function($e) {
 				$user = $e->arguments[0];
@@ -150,12 +152,14 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 	}
 	
 	/**
-	* checks wether a path exists or not - don't mind about leading or trailing slash
-	* @return bool
+	* checks wether a path exists or not and is writable
+	* @return string|bool false|int 0
+	*
 	*/
-	public function checkPath($path) {
-		if($path && is_dir(ltrim($path,"/")) && is_writable(ltrim($path,"/"))) return true;
-		return false;
+	public static function checkPath($path) {
+		if(!is_dir($path)) return false;
+		if(!is_writable($path)) return 0;
+		return $path;
 	}
 
 	/**
@@ -354,12 +358,17 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         $f->markupText = '<strong>'.sprintf($markupText,$cleaner->getAll(),$path).'</strong>';
 
  		if($cleaner->getAll() && wire('modules')->isInstalled('ProcessDatabaseBackups')) {
-        	$b = $modules->get('InputfieldButton'); 
-			$b->value = __('Edit Backups'); 
-			$b->icon = 'database';
-			$b->href = wire('pages')->get('process='.$modules->getModuleInfo('ProcessDatabaseBackups')['id'])->url; 
-			$b->addClass('head_button_clone'); 
-			$f->markupText .= '<p>'.$b->render().'</p>';
+ 			if (empty($data['field_storage_path'])) {
+	        	$b = $modules->get('InputfieldButton'); 
+				$b->value = __('Edit Backups'); 
+				$b->icon = 'database';
+				$b->href = wire('pages')->get('process='.$modules->getModuleInfo('ProcessDatabaseBackups')['id'])->url; 
+				$b->addClass('head_button_clone'); 
+				$f->markupText .= '<p>'.$b->render().'</p>';
+			} else {
+				$text = __('Notice: You cannot use ProcessDatabaseBackups to edit backups stored under a custom path.');
+				$f->markupText .= "<p class='description'>$text</p>";
+			}
 		}
 		$fields->add($f);
 
@@ -372,7 +381,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         else if ($data['cycle'] == 'logoutTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull logout of any user with 'trigger-db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
-			// 'every30Seconds' => __('30 seconds'), // for development use
+			//'every30Seconds' => __('30 seconds'), // for development use
 			'everyHour' => __('1 hour'),
 			'every6Hours' => __('6 hours'),
 			'everyDay' => __('1 day'),
@@ -442,17 +451,27 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->value = $data['backup_fileinfo'];
 		$fields->add($f); 
 
-		$def = str_replace($config->paths->root,'',$database->backups()->getPath());
+		$def = str_replace($config->paths->root,'', $database->backups()->getPath());
 		$f = $modules->get('InputfieldText'); 
 		$f->attr('name', 'field_storage_path');
 		$f->set('collapsed',$data['field_storage_path']?false:true);
 		$f->set('required', false);
 		$f->icon = 'folder-open-o'; 
 		$f->label = __('Storage Path'); 
-		$f->description = __("Path to custom storage directory.");
-		$f->notes = __("Leave this blank for storage under default path: $def");
-		if(!count($_POST) && $data['field_storage_path'] && !is_dir($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path doesn't exist! Default pass will be used.");
-		elseif(!count($_POST) && $data['field_storage_path'] && !is_writable($config->paths->root.ltrim($data['field_storage_path'],"/"))) $f->error("Path isn't writable! Default pass will be used.");
+		$f->description = __("Path to custom storage directory under root.");
+		$rp = $config->paths->root;
+		$f->textFormat = 4;
+		$f->notes = sprintf( __("Leave this blank for storage under default path: %s. Use the full path, with a **leading slash**, to specify a path above root."),  "$rp**$def**");
+
+		// check path 
+		if(!count($_POST) && $data['field_storage_path']) {
+			$p = '';
+			if (strpos($data['field_storage_path'], '/') !== 0) $p .= $rp;
+			$p .= $data['field_storage_path'];
+			if (!is_dir($p)) $f->error("Path doesn't exist! Default pass will be used.");
+			elseif (!is_writable($p)) $f->error("Path isn't writable! Default pass will be used.");
+		}
+
 		$f->value = $data['field_storage_path'];
 		$fields->add($f);
 
