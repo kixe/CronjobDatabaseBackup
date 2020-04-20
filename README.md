@@ -18,7 +18,7 @@ Choose a name for the backup files. No older file will be overwritten. If left b
 + **Backup Fileinfo**  
 Define custom fileinfo string here. Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any `$user` property surrounded with curled brackets will be replaced by the corresponding value. If left blank default setting will be 'backup made by CronjobDatabaseBackup'.
 
-## Automatic Cleanup
+## Automatic Cleanup Settings
  
 + **Maximum Number of Backups**  
 Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
@@ -26,6 +26,9 @@ Select how many backups you want to keep in the storage. Minimum 1, default and 
 Will remove backups older than selected time interval with each cron. 
 + **File protection string**  
 String in a backup file name or description to protect files from being deleted by the cronjob.
+
+## Advanced Settings
+
 + **Storage Path**  
 Path to custom storage directory. If left blank or path doesn't exist default pass will be used. You cannot use `ProcessDatabaseBackups` to edit backups stored under a custom path.
 + **Tables**  
