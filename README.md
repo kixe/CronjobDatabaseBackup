@@ -9,25 +9,30 @@ This cronjob (hooks on *LazyCron*) is executed by a call to module: *ProcessPage
 
 Each run is logged in *site/assets/logs/messages.txt*.
 
-## Settings
+## Basic Settings
 + **Backup Trigger**  
 Select a time interval for automated database backups or one of the options to force backup after a user (role) with 'trigger-db-backup' permission assigned has been logged in or logged out. Permission 'trigger-db-backup' will be added with module installation. You just need to assign it to certain roles. 
-If you want to disable automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks)  
+If you want to disable automated backups choose 'never'. No need to uninstall the module for this. (default: every 4 weeks) 
++ **Backup Name**  
+Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique. Name format syntax: # placeholder for db-name. Escape `date()` format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore.  
++ **Backup Fileinfo**  
+Define custom fileinfo string here. Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any `$user` property surrounded with curled brackets will be replaced by the corresponding value. If left blank default setting will be 'backup made by CronjobDatabaseBackup'.
+
+## Automatic Cleanup
+ 
 + **Maximum Number of Backups**  
 Select how many backups you want to keep in the storage. Minimum 1, default and maximum 100 (defined in constant MAXFILES). Executed with each cron.    
 + **Remove backups older than**  
 Will remove backups older than selected time interval with each cron. 
-+ **Backup Name**  
-Choose a name for the backup files. No older file will be overwritten. If left blank default setting is the name of the database (set in config) with a number suffix (counter) to make it unique. Name format syntax: # placeholder for db-name. Escape `date()` format with surrounding %. If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore.  
-+ **Backup Fileinfo**  
-Define custom fileinfo string here. Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any `$user` property surrounded with curled brackets will be replaced by the corresponding value. If left blank default setting will be 'backup made by CronjobDatabaseBackup'.  
++ **File protection string**  
+String in a backup file name or description to protect files from being deleted by the cronjob.
 + **Storage Path**  
 Path to custom storage directory. If left blank or path doesn't exist default pass will be used. You cannot use `ProcessDatabaseBackups` to edit backups stored under a custom path.
 + **Tables**  
 By default, the backup contains all tables. If you only want to include specific tables, you can select them individually, including the option to only back up the table structure for some tables without saving the data.  
 + **Auto add newly created Fields**  
 Option to automatically add newly created fields to an individual selection of tables.
-+ **Remove backups now**  
++ **Burn backups now!**  
 Select how many backups you want to keep in storage. Klick *SAVE* to execute.  
 
 ## Requirements

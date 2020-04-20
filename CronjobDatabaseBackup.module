@@ -6,7 +6,7 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
@@ -16,6 +16,7 @@
  * @since 1.2.0 fixed bug: backup property not set if backup trigger is disabled (cycle=0) 2019/10/28
  * @since 1.2.1 fixed bug: load assets (js) only in Module Edit UI 2020/03/20
  * @since 1.2.2 fixed bug: custom storage path not set 2020/04/20
+ * @since 1.2.3 added functionality to protect files by stopword used in name or description 2020/04/20
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -34,7 +35,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 122,
+			'version' => 123,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -62,7 +63,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'field_storage_path' => null,
 			'tables' => array(),
 			'tables_content' => array(),
-			'auto_add_new_fields' => 1
+			'auto_add_new_fields' => 1,
+			'stopword' => 'protected'
 		);
 	}
 
@@ -264,35 +266,58 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 	/**
 	* count backups (type sql)
-	* @return int
+	* @return int|array
 	* 
 	*/
-	protected function getAll() {
+	protected function getAll($array = false) {
 		$path = $this->backupPath();
 		$files = scandir($path);
-		if(!count($files)) return 0;
+		if(!count($files)) {
+			if ($array) return array('total' => 0, 'protected' => 0);
+			return 0;
+		}
 	    $all = 0;
+	    $protected = 0;
 		foreach ($files as $file) {
 	    	if (strrchr($file,'.') != '.sql') continue;
+	    	if ($array && $this->stopword) {
+	    		if (strpos($file, $this->stopword) !== false) {
+	    			$protected++;
+	    			continue;
+	    		}
+	    		$info = $this->backup->getFileInfo($file);
+		    	if (!empty($info) && $info['description'] && strpos($info['description'], $this->stopword) !== false) {
+	    			$protected++;
+	    			continue;
+	    		}
+		    }
 	        $all++;
 	    }
-		return $all;
+	    if ($array) return array('total' => $all + $protected, 'protected' => $protected);
+		return $all + $protected;
 	}
 
 	/**
 	* get last backups
-	* @param int size
-	* @param int deadline (unix timestamp)
+	* files with stopword in its name or description will be ignored
+	*
+	* @param int $size
+	* @param int $deadline (unix timestamp)
 	* @return array/ bool
 	* 
 	*/
-	protected function keep($size=1,$deadline=null) {
+	protected function keep($size = 1, $deadline = null) {
 
 		$path = $this->backupPath();
 		$files = scandir($path);
 		if(!count($files)) return false;
 	    foreach ($files as $file) {
 	    	if (strrchr($file,'.') != '.sql') continue;
+	    	if ($this->stopword) {
+	    		if (strpos($file, $this->stopword) !== false) continue;
+		    	$info = $this->backup->getFileInfo($file);
+		    	if (!empty($info) && $info['description'] && strpos($info['description'], $this->stopword) !== false) continue;
+		    }
 	    	$date = filemtime($path.$file);
 	    	if($deadline && $date < $deadline) continue;
 	        $last[$file] = $date;
@@ -305,22 +330,28 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 	/**
 	* clean backup directory
-	* @param size
+	* files with stopword in its name or description will be ignored @see keep()
+	*
+	* @param int $size
+	* @param int $deadline (unix timestamp)
 	* @return array
 	* 
 	*/
-	protected function clean($size=1,$deadline=null) {
+	protected function clean($size = 1, $deadline = null) {
 
 		if (!$this->keep()) return array();
 		$path = $this->backupPath(); 
 		$cleaned = array();	
 
 		$error_message = $this->_("Removing %1s from %2s failed!");
-		$keep = $this->keep($size,$deadline);
+		$keep = $this->keep($size, $deadline);
 		foreach(new DirectoryIterator($path) as $backup) {
 			if ($backup->getExtension() != 'sql') continue;
 			$backup = $backup->getFilename();
-			if (in_array($backup,$keep)) continue;
+			if (in_array($backup, $keep)) continue;
+			if (strpos($backup, $this->stopword) !== false) continue;
+			$info = $this->backup->getFileInfo($backup);
+			if (!empty($info) && $info['description'] && strpos($info['description'], $this->stopword) !== false) continue;
 			if (unlink($path.$backup)) {
 				$cleaned[] = $backup;
 				continue;
@@ -352,10 +383,12 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$defaults = self::getDefaultConfig();
 		$data = array_merge($defaults, $data);
 		$path = $cleaner->backupPath(true);
+		$numFiles = $cleaner->getAll(true);
  
         $f = $modules->get("InputfieldMarkup");
-		$markupText = __("%d backups are currently stored in folder %s");
-        $f->markupText = '<strong>'.sprintf($markupText,$cleaner->getAll(),$path).'</strong>';
+		$markupText = sprintf( __('%d backups are currently stored in folder %s.'), $numFiles['total'], $path);
+		if (!empty($numFiles['protected'])) $markupText .= '<br/>' . sprintf( __('%d of them are protected.'), $numFiles['protected']);
+        $f->markupText = "<strong>$markupText</strong>";
 
  		if($cleaner->getAll() && wire('modules')->isInstalled('ProcessDatabaseBackups')) {
  			if (empty($data['field_storage_path'])) {
@@ -372,7 +405,11 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		}
 		$fields->add($f);
 
-        $f = $modules->get("InputfieldSelect");
+        $fs = $modules->get('InputfieldFieldset');
+		$fs->label = __("Basic Settings");
+		$fs->collapsed = false;
+
+		$f = $modules->get("InputfieldSelect");
         $f->attr('name', 'cycle');
 		$f->label = __("Backup Trigger");
  		$f->icon = 'refresh';
@@ -381,7 +418,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
         else if ($data['cycle'] == 'logoutTrigger') $f->notes = __("**IMPORTANT:** The cronjob to backup your database is triggered after successfull logout of any user with 'trigger-db-backup' permission.");
 		$f->addOptions(array(
 			0 => __('never'),
-			//'every30Seconds' => __('30 seconds'), // for development use
+			// 'every30Seconds' => __('30 seconds'), // for development use
 			'everyHour' => __('1 hour'),
 			'every6Hours' => __('6 hours'),
 			'everyDay' => __('1 day'),
@@ -394,7 +431,41 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
             ));
         if(isset($_POST['cycle']) && $_POST['cycle'] != $data['cycle']) $f->message( __('Backup cycle interval changed to').' '.$_POST['cycle']);
 		$f->value = $data['cycle'];
- 		$fields->add($f);
+		$f->columnWidth = 33;
+ 		$fs->add($f);
+
+ 		$def = $config->dbName;
+		$f = $modules->get('InputfieldText'); 
+		$f->attr('name', 'backup_name');
+		$f->set('collapsed',$data['backup_name']?false:true);
+		$f->attr('pattern', '[A-Za-z0-9%#_-]*');
+		$f->set('required', false);
+		$f->icon = 'file-archive-o'; 
+		$f->label = __('Backup Name'); 
+		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
+		$f->notes = __('If omitted the name of the database will be used (config). Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value.If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
+		$f->value = $data['backup_name'];
+		$f->columnWidth = 33;
+		$fs->add($f); 
+
+		$f = $modules->get('InputfieldText'); 
+		$f->attr('name', 'backup_fileinfo');
+		$f->set('collapsed',$data['backup_fileinfo']?false:true);
+		$f->set('required', false);
+		$f->icon = 'info-circle'; 
+		$f->label = __('Backup Fileinfo'); 
+		$f->description = __('Define custom fileinfo string here.'); 
+		$f->notes = __('Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value. Default: \'backup made by CronjobDatabaseBackup\''); 
+		$f->value = $data['backup_fileinfo'];
+		$f->columnWidth = 33;
+		$fs->add($f); 
+
+		// add to fieldset
+		$fields->add($fs);
+
+		$fs = $modules->get('InputfieldFieldset');
+		$fs->label = __("Automatic Cleanup");
+		$fs->collapsed = true;
 
 		$f = $modules->get('InputfieldInteger'); 
 		$f->attr('name', 'max'); 
@@ -408,7 +479,8 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		$f->description = __('How many backups do you want to keep in the storage?');
 		$notes = __("max value: %d (defined by constant MAXFILES)");
 		$f->notes = sprintf($notes,self::MAXFILES);
-		$fields->add($f); 
+		$f->columnWidth = 33;
+		$fs->add($f); 
 
         $f = $modules->get("InputfieldSelect");
         $f->attr('name', 'deadline');
@@ -425,31 +497,20 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			'1 year' => __('1 year'),
             ));
 		$f->value = $data['deadline'];
- 		$fields->add($f);
+		$f->columnWidth = 34;
+ 		$fs->add($f);
 
-		$def = $config->dbName;
-		$f = $modules->get('InputfieldText'); 
-		$f->attr('name', 'backup_name');
-		$f->set('collapsed',$data['backup_name']?false:true);
-		$f->attr('pattern', '[A-Za-z0-9%#_-]*');
+ 		$f = $modules->get('InputfieldText'); 
+		$f->attr('name', 'stopword');
 		$f->set('required', false);
-		$f->icon = 'file-archive-o'; 
-		$f->label = __('Backup Name'); 
-		$f->description = __('This will be used as the backup filename. Extension .sql will be added automatically.'); 
-		$f->notes = __('If omitted the name of the database will be used (config). Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value.If filename exists a unique filename will be generated: [filename]-[n].sql. Allowed types: A-Z, a-z, 0-9, #, %, dash and underscore'); 
-		$f->value = $data['backup_name'];
-		$fields->add($f); 
+		$f->label = __('File protection string'); 
+		$f->description = __('Using this string in a backup file name or description protects this file from being deleted.'); 
+		$f->notes = __('Files can still be deleted manually, but are not affected by the cyclical cleaning by the cronjob.'); 
+		$f->value = $data['stopword'];
+		$f->columnWidth = 33;
+		$fs->add($f);
 
-		$f = $modules->get('InputfieldText'); 
-		$f->attr('name', 'backup_fileinfo');
-		$f->set('collapsed',$data['backup_fileinfo']?false:true);
-		$f->set('required', false);
-		$f->icon = 'info-circle'; 
-		$f->label = __('Backup Fileinfo'); 
-		$f->description = __('Define custom fileinfo string here.'); 
-		$f->notes = __('Format syntax: # placeholder for db-name. Escape date() format with surrounding %. Any $user property surrounded with curled brackets will be replaced by the corresponding value. Default: \'backup made by CronjobDatabaseBackup\''); 
-		$f->value = $data['backup_fileinfo'];
-		$fields->add($f); 
+		$fields->add($fs);
 
 		$def = str_replace($config->paths->root,'', $database->backups()->getPath());
 		$f = $modules->get('InputfieldText'); 
