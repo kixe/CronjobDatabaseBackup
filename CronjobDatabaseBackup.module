@@ -6,7 +6,7 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.2.3
+ * @version 1.2.4
  *
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
@@ -17,6 +17,7 @@
  * @since 1.2.1 fixed bug: load assets (js) only in Module Edit UI 2020/03/20
  * @since 1.2.2 fixed bug: custom storage path not set 2020/04/20
  * @since 1.2.3 added functionality to protect files by stopword used in name or description 2020/04/20
+ * @since 1.2.4 moved check if cycle is set after setting custom path to make available custom path for external trigger 2020/05/01
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -35,7 +36,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 123,
+			'version' => 124,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -130,10 +131,10 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 		});
 
 		$this->backup = $this->wire('database')->backups(); // WireDatabaseBackup Class
-		if (!$this->cycle) return;
 		$this->max = ($this->max && $this->max <= self::MAXFILES)?$this->max:self::MAXFILES;
 		$customPath = self::checkPath($this->wire('config')->paths->root.$this->field_storage_path);
 		if ($this->field_storage_path && $customPath) $this->backup->setPath($customPath);
+		if (!$this->cycle) return;
 		if ($this->cycle == 'loginTrigger') {
 			$this->addHookAfter("Session::loginSuccess", function($e) {
 				$user = $e->arguments[0];
