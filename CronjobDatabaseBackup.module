@@ -6,7 +6,7 @@
  * @author kixe (Christoph Thelen) 2014/11/05
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/8207-cronjob-database-backup/
- * @version 1.2.4
+ * @version 1.2.5
  *
  * @since 1.1.5 added CTA Button to ProcessDatabaseBackups page (edit backups) 2016/11/28
  * @since 1.1.6 fixed bug trigger backup by any user if time interval is selected. Added option to trigger backup on users login 2019/08/10
@@ -18,6 +18,7 @@
  * @since 1.2.2 fixed bug: custom storage path not set 2020/04/20
  * @since 1.2.3 added functionality to protect files by stopword used in name or description 2020/04/20
  * @since 1.2.4 moved check if cycle is set after setting custom path to make available custom path for external trigger 2020/05/01
+ * @since 1.2.5 Bugfix: Check if file exists before unlinking  2024/09/15
  *
  * some code taken from Ryans Module Database Backups (Thanks!)
  *
@@ -36,7 +37,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 
 		$infoArray = array(
 			'title' => __('Cronjob Database Backup'), 
-			'version' => 124,
+			'version' => 125,
 			'summary' => __("Periodic automatic backup of the database. Set interval or trigger option in module settings."),
 			'autoload' => true,
 			'singular' => true,
@@ -353,7 +354,7 @@ class CronjobDatabaseBackup extends Process implements ConfigurableModule {
 			if (strpos($backup, $this->stopword) !== false) continue;
 			$info = $this->backup->getFileInfo($backup);
 			if (!empty($info) && $info['description'] && strpos($info['description'], $this->stopword) !== false) continue;
-			if (unlink($path.$backup)) {
+			if (file_exists($path.$backup) && unlink($path.$backup)) {
 				$cleaned[] = $backup;
 				continue;
 			}
